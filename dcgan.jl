@@ -1,4 +1,5 @@
 using Pkg;
+Pkg.add("Flux")
 Pkg.add("Images")
 Pkg.add("MLDatasets")
 Pkg.add("Statistics")
@@ -35,7 +36,6 @@ function create_output_image(gen, fixed_noise, hparams)
 end
 
   
-# weight initialization as given in the paper https://arxiv.org/abs/1511.06434
 dcgan_init(shape...) = randn(Float32, shape...) * 0.02f0
 
 function Discriminator()
