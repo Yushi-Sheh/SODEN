@@ -1,5 +1,6 @@
 using Flux
 
+
 function make_net(input_size, hidden_size, num_layers, output_size, dropout=0,
         batch_norm=false, act="relu", softplus=True)
     if act== "selu"
@@ -29,6 +30,15 @@ function make_net(input_size, hidden_size, num_layers, output_size, dropout=0,
     push!(modules, softmax)
     return Chain(modules...)
 end
+
+mutable struct BaseSurvODEFunc
+    nfe::Int64
+    batch_time_mode::Bool
+end
+function set_batch_time_mode(obj::BaseSurvODEFunc,mode::Bool)
+    obj.batch_time_mode=mode
+end
+
 
 #m=make_net(10,12,3,12,0.1,true,"relu",true)
 #print(make_net(10,12,3,12,0.1,true,"relu",true))
