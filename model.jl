@@ -1,5 +1,7 @@
 using Flux
 using Base: @kwdef
+using CUDA 
+using Random
 
 
 function make_net(input_size, hidden_size, num_layers, output_size, dropout=0,
@@ -116,6 +118,23 @@ function make_rnn(RNNModel,input_size,hidden_size,num_layers)
     return Chain(layers...)
 end
 
+@kwdef mutable struct CoxFuncModel
+    model_config=nothing
+    feature_size =nothing
+    func_type =nothing
+    has_feature =nothing
+    use_embed =nothing
+    odefunc=nothing
+    beta=nothing
+    x_net=nothing
+    embed=nothing 
+    last_eval=nothing 
+end
+
+function CoxFuncModel_init(obj::CoxFuncModel,model_config,feature_size,use_embed)
+
+end 
+
 mutable struct SODEN 
     rnn_config 
     seq_feat_size 
@@ -159,7 +178,18 @@ function SODEN_init(obj::SODEN,model_config,feature_size,use_embed)
     end
 end
 
+function SODEN_set_last_eval(obj::SODEN,last_eval=true)
+    if "set_last_eval" in keys(obj.model)
+        set_last_eval(last_eval)
+    end 
+end
 
+function SODEN_forward(obj::SODEN,inputs)
+    #what is inputs?
+    if isnothing(obj.rnn) ==false
+
+    end
+end
 #define dict_type
 #get(collection, key, default) Return the value stored 
 #for the given key, or the given default value if no mapping for the key is present.
