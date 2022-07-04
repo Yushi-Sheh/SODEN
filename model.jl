@@ -80,6 +80,7 @@ function reset_nfe(obj::ODEFuncType)
     obj.nfe=0
 end
 
+
 function ExpODEFunc_forward(obj::ExpODEFunc,t,y)
     obj.nfe+=1
     if obj.batch_time_mode
@@ -89,11 +90,17 @@ function ExpODEFunc_forward(obj::ExpODEFunc,t,y)
     end
 end
 
+# t: (1,batch) y: (2+k, batch )
 function MLPODEFunc_forward(obj::MLPODEFunc,t,y)
     obj.nfe+=1
     #not implement device part
     #T = y.index_select(-1, torch.tensor([1]).to(device)).view(-1, 1)
+    #(1,batch)
+    T=reshape(selectdim(y,1,2),1,:)
     #inp = t.repeat(T.size()) * T
+    inp=T*repeat(t,size(T)...)
+
+    output=obj.net(inp)*T
     #output = self.net(inp) * T
     zero_m=zeros(size(T))
     #in pytorch is 1
@@ -130,9 +137,40 @@ end
     embed=nothing 
     last_eval=nothing 
 end
-
+function set_last_eval(obj::CoxFuncModel,last_eval::Bool)
+    obj.last_eval=last_eval
+end
 function CoxFuncModel_init(obj::CoxFuncModel,model_config,feature_size,use_embed)
-
+    obj.model_config=model_config
+    obj.feature_size=feature_size
+    config=get(get(model_config,"ode",-1),"surv_ode_0",-1)
+    obj.func_type=get(config,"func_type",-1)
+    obj.has_feature=get(config,"has_feature",-1)
+    obj.use_embed=use_embed
+    if obj.has_feature
+        if obj.func_type=="cox_mlp_exp"
+            beta_init=randn(feature_size)./sqrt(feature_size)
+            beta_init=reshape(beta_init,:,1)
+        elseif obj.func_type=="cox_mlp_mlp":
+            hidden_size=get(config,"hidden_size",-1)
+            num_layers=get(config,"num_layers",-1)
+            obj.x_net=make_net(feature_size,hidden_size,num_layers,1,batch_norm=get(config,"batch_norm",-1))
+        else
+            error("Type not implemented")
+        end
+        if use_embed
+            self.embed=Embedding(1602,self.feature_size)
+        end
+    end
+    #Not fully implemented
+    if obj.func_type=="exponential"
+        obj.odefunc=ExpODEFunc()
+    elseif (obj.func_type=="cox_mlp_exp"||obj.func_type == "cox_mlp_mlp")
+        obj.func_type=MLPODEFunc()
+    else
+        error("Function type is not supported.")
+    end
+    set_last_eval(obj,false)
 end 
 
 mutable struct SODEN 
@@ -143,7 +181,7 @@ mutable struct SODEN
     model 
 end
 
-
+#use neural ODE function possibly 
 function SODEN_init(obj::SODEN,model_config,feature_size,use_embed)
     #model_config: dict 
     rnnParam=get(model_config,"rnn",-1)
